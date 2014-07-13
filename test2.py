@@ -13,5 +13,5 @@ import Misc
 # for f in TRIP['flightBacks']:
 # 	print '|'.join([f['cost'], TRIP['flightTO']['moves'][0]['date'], f['moves'][0]['date']])
 
-for x in DateCombination('2014.08.06', '2014.08.18', dom2=2, S=5):
-	print x
+for x in DateCombination('2014.08.06', '2014.08.14', dom2=6, S=5):
+	p

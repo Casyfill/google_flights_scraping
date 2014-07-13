@@ -39,14 +39,14 @@ def DateCombination(d1, d2, dom1=0, dom2=0, S=0):
 	import datetime
 	
 	# cleaning
-	def parsing(d):
-		if '/' in d1 or '.' in d1:
-			d.replace('/','-').replace('.','-')
+	def clean(d):
+		if '/' in d or '.' in d:
+			return	d.replace('/','-').replace('.','-')
+		else:
+			return d
 
-		return datetime.datetime.strptime(d, "%Y-%m-%d")
-
-	d1= datetime.datetime.strptime(d1, "%Y.%m.%d")
-	d2= datetime.datetime.strptime(d2, "%Y.%m.%d")
+	d1= datetime.datetime.strptime(clean(d1), "%Y-%m-%d")
+	d2= datetime.datetime.strptime(clean(d2), "%Y-%m-%d")
 
 	dateList1 = [d1 + datetime.timedelta(days=x) for x in range(0, dom1+1)]
 	dateList2 = [d2 + datetime.timedelta(days=x) for x in range(0, dom2+1)]
@@ -57,9 +57,6 @@ def DateCombination(d1, d2, dom1=0, dom2=0, S=0):
 			if date2>(date1+datetime.timedelta(days=(S+1))):
 				yield (date1.strftime('%Y-%m-%d') , date2.strftime('%Y-%m-%d'))
 				trigger = True
-	if trigger = False:
+	if trigger == False:
 		print 'Sorry, something bad with dates you choosed'
 
-
-for x in DateCombination('2014.08.06','2014.08.09', dom1=2,dom2=4,S=2):
-	print x

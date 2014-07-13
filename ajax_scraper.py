@@ -21,8 +21,9 @@ To = ['OKC'] #Oklahoma-City
 DateStart = '2014-08-06'
 DateEnd = '2014-08-15'
 
-StartDomain = 1
-EndDomain = 1
+StartDomain = 0
+EndDomain = 10
+S = 7
 
 
 
