@@ -1,14 +1,19 @@
-from selenium import webdriver
-# from datetime import date
-from Misc import dateParse
-# import misc
-import lxml.html
+#!/usr/bin/env python
+#-*- coding: utf-8 -*-
+import sys
+sys.path.append("/Users/casy/Dropbox (RN&IA'N)/Projects/Kats/Afisha/2014_07_05_Flight/google_flights_scraping/misc")
 
+from selenium import webdriver
+import lxml.html
+import time
+# from datetime import date
+
+# MYSCRIPTS
+from Misc import dateParse
+
+# STARTING BROWSER
 ChromePath = r"/Users/casy/Dropbox (RN&IA'N)/Projects/Kats/Afisha/2014_07_05_Flight/chromedriver"
 browser = webdriver.Chrome(executable_path=ChromePath)
-
-
-# Scraping googleFlight site
 
 # def TODO():
 	# toDO: 
@@ -18,40 +23,9 @@ browser = webdriver.Chrome(executable_path=ChromePath)
 	# dateList maker - сделать нормальный генератор дат, с проверкой нахлеста
 
 
-From = ['DME', 'VKO', 'SVO'] #Moscow
-To = ['OKC'] #Oklahoma-City
-DateStart = '2014-08-06'
-DateEnd = '2014-08-15'
-
-StartDomain = 1
-EndDomain = 1
-
-
-# def dateParse(text):
-# 	y = date.today().year
-# 	mDict = {'янв.':1,
-# 			'фев.':2,
-# 			'марта':3,
-# 			'апр.':4,
-# 			'мая':5,
-# 			'июня':6,
-# 			'июля':7,
-# 			'авг.':8,
-# 			'сен.':9,
-# 			'окт.':10,
-# 			'ноя.':11,
-# 			'дек.':12,
-# 			}
-
-	# for key in mDict.keys():
-	# 	if key in text:
-	# 		mm = mDict[key]
-	# day = int(text.split(' ')[1])
-	# return '.'.join([str(y), str(mm), str(day)])
-
-
 # gives back a trip dictionary for any major flight combination in url
-def flightInDetails(l):
+def flightInDetails(l, close=False):
+	# подробности одного полета туда со всеми вариантами возвращения в указанный день
 	
 	global browser
 	browser.get(l)
@@ -107,19 +81,15 @@ def flightInDetails(l):
 		dDom = lxml.html.fromstring(htmlstring)
 		flightBack = flightStory(dDom.cssselect('div[class=GHFBRF-DEPC]')[1])
 		flightBack['cost'] = dDom.cssselect('span[class=GHFBRF-DKIB]')[0].text.encode('utf-8').replace('$','').replace(' ','')
+		flightBack['link'] = link
 		trip['flightBacks'].append(flightBack)
 	
-	print 'trip scraped: 1 TO and %d OUT' % (len(trip['flightBacks']))
+	# print 'trip scraped: 1 TO and %d OUT' % (len(trip['flightBacks']))
 	return trip
 
+	if close:
+		browser.close()
 
-
-print 'another try'
-TRIP = flightInDetails("https://www.google.com/flights/#search;f=DME,VKO,SVO;t=OKC;d=2014-07-20;r=2014-08-22;sel=SVOCDG0AF1845-CDGMSP0DL170-MSPOKC0DL4840")
-browser.close()
-
-for f in TRIP['flightBacks']:
-	print '|'.join([f['cost'], TRIP['flightTO']['moves'][0]['date'], f['moves'][0]['date']])
 
 
 
