@@ -17,8 +17,8 @@ DateStart = '2014-08-06'
 DateEnd = '2014-08-14'
 
 StartDomain = 0
-EndDomain = 6
-S = 7
+EndDomain = 1
+S = 2
 
 maxStops = 4
 
@@ -27,6 +27,11 @@ maxStops = 4
 # data = (recordFlight(From, To, x[0],x[1], maxStops=1 ) for x in DateCombination(DateStart, DateEnd, dom1=StartDomain, dom2=EndDomain, S=S))
 data = []
 for x in DateCombination(DateStart, DateEnd, dom1=StartDomain, dom2=EndDomain, S=S):
-	data.append(recordFlight(From,To,x[0],x[1],maxStops))
+	table=recordFlight(From,To,x[0],x[1],maxStops, back=False)
+	for card in table:
+		print '|'.join([ card['start'].strftime("%Y.%m.%d %H:%M"), card['airports'],str(card['FlightTime'].seconds/3600), str(card['cost'])])
 	
+	# .strftime("%d.%m.%Y. %H:%M")
+# browser.close()
+
 

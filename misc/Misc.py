@@ -29,7 +29,6 @@ def dateParse(text):
 	return '.'.join([str(y), str(mm), str(day)])
 
 
-
 def DateCombination(d1, d2, dom1=0, dom2=0, S=0):
 	# ГЕНЕРАТОР КОРРЕКТНЫХ КОМБИНАЦИЙ ДАТ ДЛЯ ЗАПРОСА
 	# d1, d2 - стартовые даты прилета и улета
@@ -60,3 +59,39 @@ def DateCombination(d1, d2, dom1=0, dom2=0, S=0):
 	if trigger == False:
 		print 'Sorry, something bad with dates you choosed'
 
+def cleanCost(txt):
+	NC = ''
+	for char in txt:
+		if char in ['1','2','3','4','5','6','7','8','9','0']:
+			NC+=char
+
+	return int(NC)
+
+
+def parseDuration(txt):
+	from datetime import timedelta
+	array = txt.replace(' мин.','').split(' ч. ')
+	return timedelta(hours=int(array[0]), minutes=int(array[1]))
+
+def parseDateTime(txt):
+	from datetime import datetime
+	monthdict={ 'января' :1,
+				'февраля':2,
+				'марта'  :3,
+				'апреля' :4,
+				'мая'    :5,
+				'июня'   :6,
+				'июля'   :7,
+				'августа':8,
+				'сентября':9,
+				'октября':10,
+				'ноября' :11,
+				'декабря':12,}
+	
+	
+	txt = txt.split(', ')[1].replace(' г. в','').split(' ')
+	txt[1] = str(monthdict[txt[1]])
+	return  datetime.strptime( '|'.join(txt), "%d|%m|%Y|%H:%M")
+	
+
+# print parseDateTime('среда, 6 августа 2014 г. в 09:45')
