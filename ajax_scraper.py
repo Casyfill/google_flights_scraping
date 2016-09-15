@@ -1,156 +1,148 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+'''
+selenium ajax_driver allows to wait for ajax-driven page 
+(google flights, in this case) to be loaded.
+'''
 from selenium import webdriver
 import time
-import lxml.html
+from lxml import html
+import json
+from csv import DictWriter
+import warnings
 
-ChromePath = r"/Users/casy/Dropbox (RN&IA'N)/Projects/Kats/Afisha/2014_07_05_Flight/chromedriver"
-browser = webdriver.Chrome(executable_path=ChromePath)
+FAILS = 0 # tickets failed to parse
 
+def _flightRequest(search, maxStops=None):
+	''' URL Builder
 
-# Scraping googleFlight site
+	http://www.google.com/flights/#search | The website URL
+	f=ORD,MDW,MKE | Origin Airport(s) (from)
+	t=WAS | Destination Airport(s) (to)
+	d=2011-11-14 | Departure Date (depart)
+	r=2011-11-17 | Return Date (return)
+	a=AA,CO,WN,UA | Air Carrier(s)(airline)
+	c=DFW,IAH | Connection Cities (connect)
+	s=1 | Maximum Stops (stops)
+	olt=0,900 | Outbound Landing Time Range – Min-Max in minutes from 0:00 (outbound landing – rival time range)
+	itt=840,1440 | Inbound Takeoff Time Range – Min-Max in minutes from 0:00 (inbound takeoff – departure time range)
+	tt=o/m   |one-way/multyway
+	'''
+	From, To, DateStart, DateEnd = search.values() 
 
-# def TODO():
-	# toDO: 
-	#  * click_for_more
-	# getFlightLink
-	# flightDetails
-	# dateList maker - сделать нормальный генератор дат, с проверкой нахлеста
-
-
-From = ['DME', 'VKO', 'SVO'] #Moscow
-To = ['OKC'] #Oklahoma-City
-DateStart = '2014-08-06'
-DateEnd = '2014-08-15'
-
-StartDomain = 0
-EndDomain = 10
-S = 7
-
-
-
-
-def recordFlight(From, To, departure, Return, maxStops=1 ):
-
-	def flightRequest(From, To, departure, Return, maxStops=1):
-		
-		# documentation
-		# http://www.google.com/flights/#search | The website URL
-		# f=ORD,MDW,MKE | Origin Airport(s) (from)
-		# t=WAS | Destination Airport(s) (to)
-		# d=2011-11-14 | Departure Date (depart)
-		# r=2011-11-17 | Return Date (return)
-		# a=AA,CO,WN,UA | Air Carrier(s)(airline)
-		# c=DFW,IAH | Connection Cities (connect)
-		# s=1 | Maximum Stops (stops)
-		# olt=0,900 | Outbound Landing Time Range – Min-Max in minutes from 0:00 (outbound landing – arrival time range)
-		# itt=840,1440 | Inbound Takeoff Time Range – Min-Max in minutes from 0:00 (inbound takeoff – departure time range)
-		# tt=o/m   |one-way/multyway
-		
-		# Making Url
-
-		baseUrl = "https://www.google.com/flights/#search"
-		home = 'f=' + ','.join(From) # "DME,VKO,SVO"
-		to = 't=' + ','.join(To)
-		# print ';'.join([baseUrl, home, to, 'd='+ departure, 'r=' + Return, 's=' +str(maxStops)])
-		return ';'.join([baseUrl, home, to, 'd='+ departure, 'r=' + Return, 's=' +str(maxStops)])
-		# url = 'https://www.google.com/flights/#search;f=DME,VKO,SVO;t=VVO;d=2014-07-20;r=2014-07-24'
-
-	def parseCard (f):
-
-		
-		# first (cost and type)
-		link = f.get('href')
-		flightDetails(link)
-		# print link
-		card =  f.cssselect('a > div')
-		# first = card[0].cssselect('div[elm="p"]>div')
-		# cost = first[0].text #.replace(' $','').replace(' ','')
-		# # print cost
-		# # cost= int(cost)
-		# Type = first[1].text
+	burl = "https://www.google.com/flights/#search"
+	url_template = '{burl};f={From};t={To};d={departure};r={arrival}'
 	
-		# # second (dates, company)
-		# second = card[1]
-		# dates = second.cssselect('div>span')
-		# start = dates[0].get('tooltip')
-		# end = dates[1].get('tooltip')
-		# company = second.cssselect('div')[-1].text
+	url = url_template.format(burl=burl, From=';'.join(From), To=';'.join(To),
+							  departure=DateStart, arrival=DateEnd )
+	
+	if maxStops:
+		url+= ';s={}'.format(maxStops)
+
+	return url
+
+
+def _parseCard(card):
+	'''parse flight card,
+	getting company, flight timing and date, etc.
+	returns flight info dictionary'''
+	global FAILS
+
+	try:
+		data = {'link': card.xpath('./@href')[0],
+			'price': card.xpath('./div[1]/div/div')[0].text,
+			'departure': card.xpath('./div[2]/div/span[1]')[0].text,
+			'arrival': card.xpath('./div[2]/div/span[2]')[0].text,
+			'duration': card.xpath('./div[3]/div[1]')[0].text,
+			'stops': card.xpath('./div[4]/div[1]')[0].text,
+			'airline': card.xpath('./div[2]/div[last()]')[0].text_content()
+			}
+
+	except Exception as inst:
+		print inst
+		print('Failed to parse card...')
+		FAILS+=1
+		data = {}
+	return data 
+
+
+def _storeFlights(flights, path='test_search.csv'):
+	'''stores flights in csv'''
+	with open('test_search.csv', 'w') as csvfile:
+		headers = ['link', 'price', 'departure', 'arrival', 'duration', 'airline', 'stops']
+		writer = DictWriter(csvfile, fieldnames=headers)
+		writer.writeheader()
 		
-		# # third (airports, time)
-		# third = card[2]
-		# fTime = third.cssselect('div>div')[0].text
-		# airports = third.cssselect('div>div')[1].text
+		for f in flights:
+			writer.writerow(f)
 
-		# # fourth (stops)
-		# fourth = card[3]
-		# stops = fourth.cssselect('div>div')[0].text
 
+class flightCollector():
+	'''flight data collector'''
+
+	def __init__(self, chromePath="misc/chromedriver"):
+		self.browser = webdriver.Chrome(executable_path=chromePath)
+
+
+	def searchAll(self, searches, timeSleep=3, **kwargs):	
+		'''search for all flights for all searches
+		NOTE: might be useful to add search name
+
+		Args:
+			searches(list): list of dictionaries, defininf search
+			timeSleep(int): seconds to sleep TODO: need to define/replace/improve
+
+		Returns:
+			list: list of flight dictionaries
+		'''
+
+		for search in searches:
+			url = _flightRequest(search, **kwargs)
+			
+			self.browser.get(url)
+			time.sleep(timeSleep)
+			# PARSING
+			dom = html.fromstring(self.browser.page_source)
+			flights = dom.xpath('//div[@iti]/a')
+
+			if len(flights)==0:
+				warnings.warn('None flights found. Check your search parameters:\n\n{}'.format(search))
+			else:
+				print 'Flights found: {}'.format(len(flights))
+				for f in flights:
+					yield _parseCard(f)
+
+
+	def close(self):
+		self.browser.close()
+
+	# def __enter__(self, **kwargs):  ## To be redefines -- needs for "with" statement
+	# 	self.__init__(self, **kwargs)
+
+	# def __exit__(self):
+	# 	self.close()
+
+
+def main():
+	'''sample of data collection routine'''
+	with open('searches.json','r') as fi:
+		searches = json.load(fi)['searches']
+
+	fs = flightCollector()
+	try:
+		flights = fs.searchAll(searches)
+
+		_storeFlights(flights)
+
+		# for f in flights:
+		# 	print f
 		
-
-
-		# return { 'link':link, 'cost':cost, 'type':Type, 'start':start, 'end':end, 'company':company,'FlightTime':fTime, 'airports':airports, 'stops':stops}
-
-	# STARTING BROUSER EMULATIONG
-	ChromePath = r"/Users/casy/Dropbox (RN&IA'N)/Projects/Kats/Afisha/2014_07_05_Flight/chromedriver"
-	browser = webdriver.Chrome(executable_path=ChromePath)
-	url = 'https://www.google.com/flights/#search;f=DME,VKO,SVO;t=OKC;d=2014-07-20;r=2014-07-24'
-	# url = flightRequest(From,To,departure,Return, maxStops)
-
-	browser.get(url)
-	time.sleep(3)
-	html = browser.page_source
+		print 'Failed to parse {} flights'.format(FAILS)
+		
+	except:
+		pass
+		# fs.close()		
 	
 
-	# PARSING
-	dom = lxml.html.fromstring(html)
-	flights = dom.cssselect('a[elm="il"]:only-child')
-	browser.close()
-	return [parseCard(f) for f in flights]
-
-
-
-
-
-
-
-# ПЕРЕБОР ДАТ
-# FIXME - сделать нормальный перебор дат
-def DataList(DateStart, StartDomain, DateEnd, EndDomain):
-	dates = {}
-	for sd in xrange(StartDomain):
- 
-		st = str(int(DateStart.split('-')[2])+sd)
-		if len(st)<2:
-			st = '0'+st
-		start = '-'.join(DateStart.split('-')[:2]  +[st])
-		dates[start]=[]
-
-		for ed in xrange(EndDomain):
-			zeroEnd = int(DateEnd.split('-')[2])
-			et = str(int(DateEnd.split('-')[2])+ed)
-			if len(st)<2:
-				et = '0'+et
-			dates[start].append('-'.join(DateEnd.split('-')[:2] +[et]))
-
-	return dates
-
-print 'start parsing ', StartDomain*EndDomain, ' urls!'
-	
-
-
-# globalTable = []
-dates = DataList(DateStart, StartDomain, DateEnd, EndDomain)
-
-
-# PRINTIN TABLE
-for start in dates:
-	for end in dates[start]:
-		print start, '--->', end, ' scraping'
-		table = recordFlight(From, To, start, end, maxStops =3)
-# 		for card in table:
-# 			print '|'.join([start, end] + [card[key] for key in card.keys()])
-# 		time.sleep(5)
-
-		# globalTable+=table
-
-# for card in globalTable:
-# 	print '|'.join([card[key] for key in card.keys()])
+if __name__ == '__main__':
+	main()

@@ -1,0 +1,9 @@
+{
+	"searches":[
+	{"From" : ["DME", "VKO", "SVO"],
+	 "To" : ["OKC"], 
+	 "DateStart" : "2016-10-06",
+	 "DateEnd" : "2016-10-25"
+	}
+	]
+}
