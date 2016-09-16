@@ -70,11 +70,12 @@ def _storeFlights(flights, path='test_search.csv'):
 	'''stores flights in csv'''
 	with open('test_search.csv', 'w') as csvfile:
 		headers = ['link', 'price', 'departure', 'arrival', 'duration', 'airline', 'stops']
+
 		writer = DictWriter(csvfile, fieldnames=headers)
 		writer.writeheader()
 		
 		for f in flights:
-			writer.writerow(f)
+			writer.writerow({k:v.encode('utf8') for k,v in f.items()})
 
 
 class flightCollector():
@@ -116,7 +117,8 @@ class flightCollector():
 	def close(self):
 		self.browser.close()
 
-	# def __enter__(self, **kwargs):  ## To be redefines -- needs for "with" statement
+	## To be redefines -- needs for "with" statement
+	# def __enter__(self, **kwargs):  
 	# 	self.__init__(self, **kwargs)
 
 	# def __exit__(self):
@@ -125,7 +127,8 @@ class flightCollector():
 
 def main():
 	'''sample of data collection routine'''
-	with open('searches.json','r') as fi:
+	
+	with open('searches.json','r') as fi: # get all searches in the json
 		searches = json.load(fi)['searches']
 
 	fs = flightCollector()
